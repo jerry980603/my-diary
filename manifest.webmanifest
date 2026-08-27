@@ -1,0 +1,17 @@
+{
+  "name": "我的小日記本",
+  "short_name": "小日記本",
+  "description": "每天的代辦事項、讀書日記、投資日記、新點子、感恩、名言與心情筆記",
+  "lang": "zh-Hant",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#faf8fd",
+  "theme_color": "#faf8fd",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

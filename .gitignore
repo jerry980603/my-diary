@@ -1,0 +1,10 @@
+# 匯出的單日日記／備份檔不要上傳到公開的網站 repo
+日記-*.md
+日記備份-*.json
+diary.json
+
+# 系統雜檔
+Thumbs.db
+desktop.ini
+.DS_Store
+.claude/

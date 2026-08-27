@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#faf8fd" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#191622" media="(prefers-color-scheme: dark)" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="小日記本" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<title>我的小日記本 · Daily Journal</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📔</text></svg>" />
+<style>
+/* ============ 主題色票 ============ */
+/* 配色：霧霾薰衣草 × 奶霧白 × 一點杏桃
+   介面本身只用薰衣草一個主色（精緻不吵），
+   顏色留給六張卡片的小圖示（可愛），底色偏暖白（舒服）。 */
+:root{
+  --bg:            #faf8fd;
+  --bg-blob-1:     #e6e3fa;
+  --bg-blob-2:     #dceaf8;
+  --bg-blob-3:     #fbeadf;
+  --surface:       #ffffff;
+  --surface-soft:  #f8f6fd;
+  --border:        #ece9f6;
+  --border-strong: #dad5ea;
+  --text:          #4b4659;
+  --text-soft:     #8e889f;
+  --text-faint:    #bab4c8;
+  --accent:        #aaa3e6;
+  --accent-deep:   #8078d2;
+  --accent-soft:   #f1eeff;
+
+  --c-todo:   #b1abec;
+  --c-study:  #a5c9ea;
+  --c-invest: #9fd5c2;
+  --c-thanks: #f6cbb2;
+  --c-quote:  #cdb9ea;
+  --c-mood:   #f3bcce;
+  --c-idea:   #f2d69a;
+  --c-file:   #bcc7da;
+
+  --shadow:    0 2px 4px rgba(120,110,160,.05), 0 12px 28px rgba(120,110,160,.10);
+  --shadow-sm: 0 1px 2px rgba(120,110,160,.06), 0 4px 12px rgba(120,110,160,.08);
+  --radius: 22px;
+}
+html[data-theme="dark"]{
+  --bg:            #191622;
+  --bg-blob-1:     #2e2750;
+  --bg-blob-2:     #20304a;
+  --bg-blob-3:     #3a2a33;
+  --surface:       #221e2d;
+  --surface-soft:  #292435;
+  --border:        #363048;
+  --border-strong: #47405e;
+  --text:          #eae5f4;
+  --text-soft:     #a49cb6;
+  --text-faint:    #756d88;
+  --accent:        #a79ef0;
+  --accent-deep:   #c6bdff;
+  --accent-soft:   #2f2846;
+  --shadow:    0 2px 4px rgba(0,0,0,.2), 0 12px 30px rgba(0,0,0,.34);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.2), 0 4px 14px rgba(0,0,0,.26);
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,"Segoe UI",system-ui,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+/* 背景暈染 */
+body::before,body::after{
+  content:""; position:fixed; border-radius:50%; filter:blur(90px);
+  opacity:.55; pointer-events:none; z-index:0;
+}
+body::before{ width:520px;height:520px; background:var(--bg-blob-1); top:-180px; left:-150px; }
+body::after { width:460px;height:460px; background:var(--bg-blob-2); bottom:-200px; right:-160px; }
+.blob3{
+  position:fixed; width:380px;height:380px;border-radius:50%;filter:blur(90px);
+  background:var(--bg-blob-3); opacity:.4; top:45%; right:22%; pointer-events:none; z-index:0;
+}
+
+::selection{ background:var(--accent-soft); color:var(--accent-deep); }
+::-webkit-scrollbar{ width:10px;height:10px; }
+::-webkit-scrollbar-thumb{ background:var(--border-strong); border-radius:99px; border:3px solid transparent; background-clip:content-box; }
+::-webkit-scrollbar-track{ background:transparent; }
+
+/* ============ 版面 ============ */
+.app{
+  position:relative; z-index:1;
+  display:grid; grid-template-columns:290px 1fr;
+  gap:26px; max-width:1280px; margin:0 auto; padding:26px 24px 70px;
+}
+
+/* ============ 側邊欄 ============ */
+.side{ position:sticky; top:26px; align-self:start; display:flex; flex-direction:column; gap:16px; max-height:calc(100vh - 52px); overflow-y:auto; padding-right:2px; }
+.brand{ display:flex; align-items:center; gap:11px; padding:2px 4px 0; }
+.brand .logo{
+  width:44px;height:44px;border-radius:15px;display:grid;place-items:center;font-size:22px;
+  background:linear-gradient(140deg,var(--c-study),var(--c-quote));
+  box-shadow:var(--shadow-sm); flex:none;
+}
+.brand h1{ font-size:17px;margin:0;font-weight:800;letter-spacing:.5px; }
+.brand p{ margin:0;font-size:11.5px;color:var(--text-soft);letter-spacing:1.5px; }
+
+.panel{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow-sm); }
+.panel h3{ margin:0 0 12px; font-size:12px; letter-spacing:1.6px; color:var(--text-soft); font-weight:800; }
+
+/* 月曆 */
+.cal-head{ display:flex;align-items:center;justify-content:space-between;margin-bottom:10px; }
+.cal-head strong{ font-size:14px; }
+.icon-btn{
+  border:1px solid var(--border); background:var(--surface-soft); color:var(--text-soft);
+  width:28px;height:28px;border-radius:10px;cursor:pointer;font-size:13px;line-height:1;
+  display:grid;place-items:center;transition:.18s;
+}
+.icon-btn:hover{ background:var(--accent-soft); color:var(--accent-deep); border-color:var(--accent); transform:translateY(-1px); }
+.cal-grid{ display:grid;grid-template-columns:repeat(7,1fr);gap:3px; }
+.cal-grid .dow{ text-align:center;font-size:10.5px;color:var(--text-faint);padding-bottom:4px;font-weight:700; }
+.cal-cell{
+  position:relative; aspect-ratio:1; border:none;background:transparent;cursor:pointer;
+  border-radius:11px;font-size:12px;color:var(--text);font-family:inherit;
+  display:grid;place-items:center;transition:.15s;
+}
+.cal-cell:hover{ background:var(--accent-soft); }
+.cal-cell.empty{ pointer-events:none; }
+.cal-cell.today{ box-shadow:inset 0 0 0 1.5px var(--accent); font-weight:800; }
+.cal-cell.active{ background:var(--accent); color:#fff; font-weight:800; }
+.cal-cell.active:hover{ background:var(--accent-deep); }
+.cal-cell .dot{
+  position:absolute;bottom:4px;left:50%;transform:translateX(-50%);
+  width:4px;height:4px;border-radius:50%;background:var(--c-invest);
+}
+.cal-cell.active .dot{ background:#fff; }
+
+/* 統計 */
+.stats{ display:grid;grid-template-columns:1fr 1fr;gap:9px; }
+.stat{ background:var(--surface-soft);border:1px solid var(--border);border-radius:14px;padding:9px 10px;text-align:center; }
+.stat b{ display:block;font-size:19px;line-height:1.3;color:var(--accent-deep); }
+.stat span{ font-size:10.5px;color:var(--text-soft);letter-spacing:.5px; }
+
+.side-actions{ display:flex;flex-direction:column;gap:7px; }
+.btn{
+  border:1px solid var(--border); background:var(--surface); color:var(--text);
+  border-radius:13px;padding:9px 13px;cursor:pointer;font-family:inherit;font-size:13px;
+  display:flex;align-items:center;gap:8px;transition:.18s;text-align:left;width:100%;
+}
+.btn:hover{ background:var(--accent-soft);border-color:var(--accent);color:var(--accent-deep);transform:translateY(-1px); }
+.btn.mini{ width:auto;padding:6px 11px;font-size:12px;border-radius:11px; }
+
+/* ============ 主要區域 ============ */
+.main{ min-width:0;display:flex;flex-direction:column;gap:20px; }
+
+.daybar{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 22px;box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.daybar .date-main{ flex:1;min-width:190px; }
+.daybar .big{ font-size:25px;font-weight:800;letter-spacing:.5px;display:flex;align-items:center;gap:10px;flex-wrap:wrap; }
+.daybar .sub{ font-size:12.5px;color:var(--text-soft);letter-spacing:1px;margin-top:1px; }
+.tag-today{ font-size:11px;background:var(--accent);color:#fff;padding:2px 10px;border-radius:99px;letter-spacing:1px;font-weight:700; }
+.nav-group{ display:flex;gap:7px;align-items:center; }
+.date-input{
+  border:1px solid var(--border);background:var(--surface-soft);color:var(--text);
+  border-radius:12px;padding:7px 10px;font-family:inherit;font-size:12.5px;cursor:pointer;
+}
+.date-input:focus{ outline:2px solid var(--accent-soft);border-color:var(--accent); }
+
+/* 心情列 */
+.moodbar{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 20px;box-shadow:var(--shadow-sm);
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.moodbar .label{ font-size:12px;letter-spacing:1.4px;color:var(--text-soft);font-weight:800; }
+.mood-list{ display:flex;gap:6px;flex-wrap:wrap; }
+.mood{
+  border:1px solid transparent;background:transparent;font-size:21px;line-height:1;
+  width:40px;height:40px;border-radius:13px;cursor:pointer;transition:.16s;filter:grayscale(.65);opacity:.65;
+}
+.mood:hover{ transform:translateY(-3px) scale(1.08);filter:none;opacity:1;background:var(--accent-soft); }
+.mood.on{ filter:none;opacity:1;background:var(--accent-soft);border-color:var(--accent);transform:scale(1.05); }
+
+/* 卡片 */
+.grid{ display:grid;grid-template-columns:repeat(2,1fr);gap:20px; }
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;
+  transition:box-shadow .2s, transform .2s;
+}
+.card:hover{ transform:translateY(-2px); box-shadow:0 4px 8px rgba(120,110,160,.08),0 16px 34px rgba(120,110,160,.14); }
+.card.wide{ grid-column:1 / -1; }
+.card-head{ display:flex;align-items:center;gap:10px;padding:15px 20px 12px;border-bottom:1px dashed var(--border); }
+.card-head .ico{ width:32px;height:32px;border-radius:11px;display:grid;place-items:center;font-size:16px;flex:none; }
+.card-head h2{ margin:0;font-size:15px;font-weight:800;letter-spacing:.6px; }
+.card-head .en{ font-size:10.5px;color:var(--text-faint);letter-spacing:1.4px;display:block;font-weight:600; }
+.card-head .right{ margin-left:auto;display:flex;align-items:center;gap:8px; }
+.count{ font-size:11px;color:var(--text-faint);letter-spacing:.5px; }
+.card-body{ padding:14px 20px 18px;flex:1;display:flex;flex-direction:column;gap:10px; }
+
+textarea{
+  width:100%;border:1px solid transparent;background:var(--surface-soft);
+  border-radius:15px;padding:12px 14px;resize:none;font-family:inherit;font-size:14px;
+  line-height:1.85;color:var(--text);transition:.18s;min-height:104px;overflow:hidden;
+}
+textarea::placeholder{ color:var(--text-faint); }
+textarea:focus{ outline:none;border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 4px var(--accent-soft); }
+textarea.tall{ min-height:230px; }
+textarea.quote{ min-height:84px;font-size:15px;font-style:italic;text-align:center;line-height:2; }
+textarea.thanks{ min-height:84px; }
+
+/* 待辦 */
+.todo-add{ display:flex;gap:8px; }
+.todo-add input{
+  flex:1;border:1px solid transparent;background:var(--surface-soft);border-radius:13px;
+  padding:10px 13px;font-family:inherit;font-size:13.5px;color:var(--text);transition:.18s;
+}
+.todo-add input::placeholder{ color:var(--text-faint); }
+.todo-add input:focus{ outline:none;border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 4px var(--accent-soft); }
+.todo-add button{
+  border:none;background:var(--c-todo);color:#fff;font-weight:800;border-radius:13px;
+  padding:0 16px;cursor:pointer;font-family:inherit;font-size:13px;transition:.18s;flex:none;
+}
+.todo-add button:hover{ background:var(--accent-deep);transform:translateY(-1px); }
+.todo-list{ list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px; }
+.todo-item{
+  display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:13px;transition:.15s;
+}
+.todo-item:hover{ background:var(--surface-soft); }
+.check{
+  width:19px;height:19px;border-radius:7px;border:1.8px solid var(--border-strong);
+  background:transparent;cursor:pointer;flex:none;margin-top:4px;transition:.18s;
+  display:grid;place-items:center;font-size:11px;color:#fff;padding:0;
+}
+.check:hover{ border-color:var(--accent); }
+.check.done{ background:var(--c-invest);border-color:var(--c-invest); }
+.todo-text{ flex:1;font-size:14px;word-break:break-word;cursor:text; }
+.todo-item.done .todo-text{ text-decoration:line-through;color:var(--text-faint); }
+.del{ border:none;background:transparent;color:var(--text-faint);cursor:pointer;font-size:15px;opacity:0;transition:.15s;padding:0 4px;line-height:1;margin-top:3px; }
+.todo-item:hover .del{ opacity:1; }
+.del:hover{ color:#e58a8a; }
+.empty-hint{ font-size:12.5px;color:var(--text-faint);text-align:center;padding:14px 0;letter-spacing:.5px; }
+
+/* 儲存提示 */
+.saver{
+  position:fixed;right:22px;bottom:22px;z-index:50;
+  background:var(--surface);border:1px solid var(--border);border-radius:99px;
+  padding:9px 18px;font-size:12.5px;color:var(--text-soft);box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:8px;
+  opacity:0;transform:translateY(12px);transition:.25s;pointer-events:none;letter-spacing:.5px;
+}
+.saver.show{ opacity:1;transform:translateY(0); }
+.saver .pip{ width:7px;height:7px;border-radius:50%;background:var(--c-invest); }
+.saver.saving .pip{ background:var(--c-thanks); }
+
+/* 彈窗 */
+.mask{
+  position:fixed;inset:0;background:rgba(58,58,95,.34);backdrop-filter:blur(4px);
+  z-index:100;display:none;align-items:flex-start;justify-content:center;padding:64px 20px;
+}
+.mask.show{ display:flex; }
+.modal{
+  background:var(--surface);border:1px solid var(--border);border-radius:24px;
+  width:100%;max-width:560px;box-shadow:0 30px 70px rgba(70,70,115,.28);
+  max-height:76vh;display:flex;flex-direction:column;overflow:hidden;
+}
+.modal-head{ padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px; }
+.modal-head h3{ margin:0;font-size:15px;letter-spacing:1px; }
+.modal-head .icon-btn{ margin-left:auto; }
+.modal-body{ padding:16px 22px 22px;overflow-y:auto; }
+.search-input{
+  width:100%;border:1px solid var(--border);background:var(--surface-soft);border-radius:14px;
+  padding:11px 15px;font-family:inherit;font-size:14px;color:var(--text);margin-bottom:12px;
+}
+.search-input:focus{ outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft); }
+.result{
+  border:1px solid var(--border);border-radius:15px;padding:11px 14px;margin-bottom:8px;
+  cursor:pointer;transition:.16s;background:var(--surface-soft);
+}
+.result:hover{ border-color:var(--accent);background:var(--accent-soft);transform:translateX(3px); }
+.result b{ font-size:13px;color:var(--accent-deep); }
+.result p{ margin:3px 0 0;font-size:12.5px;color:var(--text-soft);line-height:1.7;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
+
+/* ============ 雲端同步 ============ */
+.sync-state{
+  font-size:11.5px;color:var(--text-soft);background:var(--surface-soft);
+  border:1px solid var(--border);border-radius:12px;padding:8px 11px;margin-bottom:9px;
+  display:flex;align-items:center;gap:7px;line-height:1.5;word-break:break-all;
+}
+.sync-state::before{ content:"";width:7px;height:7px;border-radius:50%;background:var(--text-faint);flex:none; }
+.sync-state.ok::before{  background:var(--c-invest); }
+.sync-state.busy::before{ background:var(--c-idea); }
+.sync-state.err::before{ background:#e58a8a; }
+.sync-btns{ display:flex;gap:7px; }
+.sync-btns .btn{ justify-content:center;font-size:12px;padding:8px 6px; }
+
+.field{ display:block;margin-bottom:12px; }
+.field span{ display:block;font-size:12px;color:var(--text-soft);margin-bottom:5px;letter-spacing:.5px; }
+.field input{
+  width:100%;border:1px solid var(--border);background:var(--surface-soft);border-radius:12px;
+  padding:10px 13px;font-family:inherit;font-size:13.5px;color:var(--text);
+}
+.field input:focus{ outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);background:var(--surface); }
+.chk{ display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px;cursor:pointer; }
+.chk input{ width:16px;height:16px;accent-color:var(--accent-deep); }
+.note{
+  background:var(--accent-soft);border:1px solid var(--border);border-radius:14px;
+  padding:11px 14px;font-size:12.5px;line-height:1.8;color:var(--text-soft);margin-bottom:14px;
+}
+.note b{ color:var(--text); }
+.modal-actions{ display:flex;gap:8px;margin-bottom:10px; }
+.gh-msg{ font-size:12.5px;line-height:1.7;min-height:18px;color:var(--text-soft);word-break:break-word; }
+.gh-msg.ok{ color:#4fa88a; }
+.gh-msg.err{ color:#d97878; }
+.how{ margin-top:12px;font-size:12.5px;color:var(--text-soft); }
+.how summary{ cursor:pointer;color:var(--accent-deep);padding:6px 0; }
+.how ol{ padding-left:20px;line-height:1.9;margin:6px 0 0; }
+.how code{ background:var(--surface-soft);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:11.5px; }
+
+/* ============ 附件 ============ */
+.autosave{
+  font-size:11px;color:var(--text-soft);background:var(--surface-soft);
+  border:1px solid var(--border);border-radius:99px;padding:3px 11px;letter-spacing:.6px;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.autosave::before{ content:"";width:6px;height:6px;border-radius:50%;background:var(--c-invest);flex:none; }
+
+.drop{
+  border:1.8px dashed var(--border-strong);border-radius:17px;background:var(--surface-soft);
+  padding:20px 16px;text-align:center;transition:.18s;cursor:pointer;
+}
+.drop:hover{ border-color:var(--accent);background:var(--accent-soft); }
+.drop.over{ border-color:var(--accent);background:var(--accent-soft);transform:scale(1.008); }
+.drop .drop-ico{ font-size:26px;display:block;line-height:1.4; }
+.drop b{ display:block;font-size:14px;margin-top:2px; }
+.drop small{ display:block;font-size:12px;color:var(--text-soft);margin-top:3px; }
+.link{
+  border:none;background:none;color:var(--accent-deep);font-family:inherit;font-size:12px;
+  cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0;
+}
+.file-grid{ display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px; }
+.file-item{
+  display:flex;align-items:center;gap:11px;padding:9px 10px;border:1px solid var(--border);
+  border-radius:15px;background:var(--surface-soft);transition:.18s;min-width:0;
+}
+.file-item:hover{ border-color:var(--accent);box-shadow:var(--shadow-sm);transform:translateY(-1px); }
+.file-item.missing{ opacity:.66; }
+.fi-info span.cloud{ color:var(--accent-deep); }
+.thumb{
+  width:44px;height:44px;border-radius:12px;flex:none;display:grid;place-items:center;
+  font-size:19px;background:var(--surface);border:1px solid var(--border);overflow:hidden;
+}
+.thumb img{ width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in; }
+.fi-info{ flex:1;min-width:0; }
+.fi-info b{ display:block;font-size:12.5px;font-weight:700;line-height:1.5;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.fi-info span{ font-size:11px;color:var(--text-faint);letter-spacing:.3px; }
+.fi-act{ display:flex;gap:2px;flex:none; }
+.fi-act button{
+  border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--text-faint);
+  padding:4px 5px;border-radius:8px;line-height:1;transition:.15s;
+}
+.fi-act button:hover{ background:var(--accent-soft);color:var(--accent-deep); }
+.fi-act button.rm:hover{ color:#e08a8a; }
+
+.lightbox{ max-width:min(880px,92vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;align-items:center; }
+.lightbox img{ max-width:100%;max-height:72vh;border-radius:18px;box-shadow:0 24px 60px rgba(50,44,80,.45);background:#fff; }
+.lb-bar{
+  background:var(--surface);border:1px solid var(--border);border-radius:99px;
+  padding:8px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-sm);max-width:100%;
+}
+.lb-bar span{ font-size:12.5px;color:var(--text-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+
+.footer-note{ text-align:center;font-size:11.5px;color:var(--text-faint);letter-spacing:1px;padding-top:6px; }
+
+@media (max-width:900px){
+  .app{ grid-template-columns:1fr;padding:18px 15px 60px;gap:18px; }
+  .side{ position:static;max-height:none;overflow:visible; }
+  .grid{ grid-template-columns:1fr; }
+  .daybar{ padding:16px; }
+  .daybar .big{ font-size:21px; }
+  .daybar .nav-group{ width:100%; }
+  .date-input{ flex:1; }
+  .card-head,.card-body{ padding-left:16px;padding-right:16px; }
+  .file-grid{ grid-template-columns:1fr; }
+  .saver{ right:12px;bottom:12px; }
+}
+/* 觸控裝置（手機／平板）：沒有滑鼠指標，要靠手指 */
+@media (hover:none){
+  .del{ opacity:1; }                       /* 沒有 hover，刪除鍵要一直看得到 */
+  .todo-item{ padding:10px; }
+  .check{ width:22px;height:22px;margin-top:2px; }
+  .mood{ width:46px;height:46px;font-size:24px; }
+  .icon-btn{ width:34px;height:34px;font-size:15px; }
+  .btn{ padding:11px 14px; }
+  .fi-act button{ padding:8px 7px;font-size:15px; }
+  .drop{ padding:26px 16px; }
+  /* iOS 在字級小於 16px 的欄位聚焦時會自動放大畫面，很惱人 */
+  textarea,.todo-add input,.search-input,.date-input{ font-size:16px; }
+}
+</style>
+</head>
+<body>
+<div class="blob3"></div>
+
+<div class="app">
+  <!-- ============ 側邊欄 ============ -->
+  <aside class="side">
+    <div class="brand">
+      <div class="logo">📔</div>
+      <div>
+        <h1>我的小日記本</h1>
+        <p>DAILY JOURNAL</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="cal-head">
+        <button class="icon-btn" id="calPrev" title="上個月">‹</button>
+        <strong id="calTitle">2026 年 8 月</strong>
+        <button class="icon-btn" id="calNext" title="下個月">›</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="panel">
+      <h3>我的紀錄</h3>
+      <div class="stats">
+        <div class="stat"><b id="stStreak">0</b><span>連續天數</span></div>
+        <div class="stat"><b id="stDays">0</b><span>總紀錄天</span></div>
+        <div class="stat"><b id="stWords">0</b><span>本月字數</span></div>
+        <div class="stat"><b id="stDone">0</b><span>本月完成</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>雲端同步</h3>
+      <div class="sync-state" id="syncState">尚未設定</div>
+      <div class="sync-btns">
+        <button class="btn" id="btnSyncNow">🔄 立即同步</button>
+        <button class="btn" id="btnSyncSet">⚙️ 設定</button>
+      </div>
+    </div>
+
+    <div class="side-actions">
+      <button class="btn" id="btnSearch">🔍　搜尋以前的日記</button>
+      <button class="btn" id="btnExport">💾　備份全部（JSON）</button>
+      <button class="btn" id="btnImport">📥　匯入備份檔</button>
+      <button class="btn" id="btnMd">📄　匯出今天（Markdown）</button>
+      <button class="btn" id="btnTheme">🌙　切換夜間模式</button>
+      <input type="file" id="fileInput" accept="application/json" hidden />
+    </div>
+
+    <div class="footer-note">每一天都值得被好好記下來 ♡</div>
+  </aside>
+
+  <!-- ============ 主畫面 ============ -->
+  <main class="main">
+    <div class="daybar">
+      <div class="date-main">
+        <div class="big"><span id="dTitle">2026 年 8 月 12 日</span><span class="tag-today" id="tagToday" hidden>今天</span></div>
+        <div class="sub"><span id="dSub">星期三</span>　<span class="autosave" id="autoTag">自動儲存中</span></div>
+      </div>
+      <div class="nav-group">
+        <button class="icon-btn" id="dPrev" title="前一天">‹</button>
+        <input type="date" class="date-input" id="dPick" />
+        <button class="icon-btn" id="dNext" title="後一天">›</button>
+        <button class="btn mini" id="dToday">回到今天</button>
+      </div>
+    </div>
+
+    <div class="moodbar">
+      <span class="label">今天的心情</span>
+      <div class="mood-list" id="moodList"></div>
+    </div>
+
+    <div class="grid">
+      <!-- 代辦事項 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="ico" style="background:var(--c-todo)">✓</div>
+          <div><h2>代辦事項</h2><span class="en">TO-DO LIST</span></div>
+          <div class="right"><span class="count" id="todoCount">0 / 0</span></div>
+        </div>
+        <div class="card-body">
+          <div class="todo-add">
+            <input id="todoInput" placeholder="今天想完成什麼呢？" maxlength="200" />
+            <button id="todoAdd">加入</button>
+          </div>
+          <ul class="todo-list" id="todoList"></ul>
+        </div>
+      </section>
+
+      <!-- 讀書日記 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="ico" style="background:var(--c-study)">📚</div>
+          <div><h2>讀書日記</h2><span class="en">STUDY LOG</span></div>
+        </div>
+        <div class="card-body">
+          <textarea data-field="study" placeholder="今天讀了什麼？學到哪些重點、還有哪裡卡住？"></textarea>
+        </div>
+      </section>
+
+      <!-- 投資日記 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="ico" style="background:var(--c-invest)">📈</div>
+          <div><h2>投資日記</h2><span class="en">INVESTMENT LOG</span></div>
+        </div>
+        <div class="card-body">
+          <textarea data-field="invest" placeholder="今天的操作、觀察與檢討：為什麼買？為什麼賣？學到什麼？"></textarea>
+        </div>
+      </section>
+
+      <!-- 新點子開發 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="ico" style="background:var(--c-idea)">💡</div>
+          <div><h2>新點子開發</h2><span class="en">IDEA LAB</span></div>
+        </div>
+        <div class="card-body">
+          <textarea data-field="idea" placeholder="今天冒出什麼想法？想做的事、想試的方法、突然的靈感…&#10;可以順手寫下：這個點子是什麼？為什麼想做？下一步可以先做哪一小步？"></textarea>
+        </div>
+      </section>
+
+      <!-- 感恩的一句話 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="ico" style="background:var(--c-thanks)">🌷</div>
+          <div><h2>感恩的一句話</h2><span class="en">GRATITUDE</span></div>
+        </div>
+        <div class="card-body">
+          <textarea class="thanks" data-field="thanks" placeholder="今天想感謝的一件小事…"></textarea>
+        </div>
+      </section>
+
+      <!-- 名言佳句 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="ico" style="background:var(--c-quote)">✒️</div>
+          <div><h2>名言佳句</h2><span class="en">QUOTE OF THE DAY</span></div>
+          <div class="right"><button class="btn mini" id="btnQuote">🎲 給我靈感</button></div>
+        </div>
+        <div class="card-body">
+          <textarea class="quote" data-field="quote" placeholder="今天遇到的一句話，值得留下來…"></textarea>
+        </div>
+      </section>
+
+      <!-- 附件 -->
+      <section class="card wide">
+        <div class="card-head">
+          <div class="ico" style="background:var(--c-file)">📎</div>
+          <div><h2>今日附件</h2><span class="en">ATTACHMENTS</span></div>
+          <div class="right"><span class="count" id="fileCount">0 個檔案</span></div>
+        </div>
+        <div class="card-body">
+          <div class="drop" id="drop">
+            <span class="drop-ico">🗂️</span>
+            <b>把檔案拖進來，或點這裡選擇</b>
+            <small>照片、螢幕截圖、PDF、Excel… 都可以，會跟這一天一起存起來</small>
+          </div>
+          <input type="file" id="fileAdd" multiple hidden />
+          <div class="file-grid" id="fileGrid"></div>
+        </div>
+      </section>
+
+      <!-- 心情筆記本 -->
+      <section class="card wide">
+        <div class="card-head">
+          <div class="ico" style="background:var(--c-mood)">💗</div>
+          <div><h2>心情筆記本</h2><span class="en">MY DIARY</span></div>
+          <div class="right"><span class="count" id="moodWords">0 字</span></div>
+        </div>
+        <div class="card-body">
+          <textarea class="tall" data-field="diary" placeholder="今天發生了什麼呢？慢慢寫，這裡只有你自己看得到 ♡"></textarea>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="saver" id="saver"><span class="pip"></span><span id="saverText">已儲存</span></div>
+
+<!-- GitHub 同步設定 -->
+<div class="mask" id="ghMask">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>☁️ GitHub 同步設定</h3>
+      <button class="icon-btn" id="ghClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="note">
+        用一個<b>私人 repo</b> 當雲端資料庫，手機和電腦就能共用同一本日記。<br />
+        🔒 權杖只存在這台裝置的瀏覽器裡，不會傳給任何第三方；日記內容只會傳到你自己的 repo。<br />
+        ⚠️ <b>文字內容會同步；附件（照片檔案）留在各自裝置</b>，因為檔案太大不適合放 GitHub。
+      </div>
+
+      <label class="field">
+        <span>私人 Repo（格式：帳號/repo 名稱）</span>
+        <input id="ghRepo" placeholder="yourname/my-diary-data" autocomplete="off" spellcheck="false" />
+      </label>
+      <label class="field">
+        <span>檔案路徑（放在 repo 裡的檔名）</span>
+        <input id="ghPath" placeholder="diary.json" autocomplete="off" spellcheck="false" />
+      </label>
+      <label class="field">
+        <span>Personal Access Token</span>
+        <input id="ghToken" type="password" placeholder="github_pat_…" autocomplete="off" spellcheck="false" />
+      </label>
+      <label class="chk"><input type="checkbox" id="ghAuto" checked /> 自動同步（開啟時拉取、儲存後自動上傳）</label>
+
+      <div class="modal-actions">
+        <button class="btn mini" id="ghSave">🔗 連線並儲存</button>
+        <button class="btn mini" id="ghForget">🗑 移除設定</button>
+      </div>
+      <div class="gh-msg" id="ghMsg"></div>
+
+      <details class="how">
+        <summary>怎麼建立 repo 和 token？（點開看步驟）</summary>
+        <ol>
+          <li>到 GitHub 按 <code>New repository</code>，名稱例如 <code>my-diary-data</code>，<b>務必選 Private</b>，建好即可（可以是空的）。</li>
+          <li>到 <code>Settings → Developer settings → Personal access tokens → Fine-grained tokens</code>，按 <code>Generate new token</code>。</li>
+          <li>Repository access 選 <code>Only select repositories</code>，只勾剛剛那個 repo。</li>
+          <li>Permissions 裡把 <code>Contents</code> 設成 <code>Read and write</code>（其他都不用給）。</li>
+          <li>設定到期日（例如 1 年），產生後把 token 複製貼到上面欄位。</li>
+          <li>手機上打開同一個網站，填一樣的三個欄位，就會同步同一本日記。</li>
+        </ol>
+      </details>
+    </div>
+  </div>
+</div>
+
+<!-- 圖片預覽 -->
+<div class="mask" id="imgMask">
+  <div class="lightbox">
+    <img id="imgFull" alt="" />
+    <div class="lb-bar">
+      <span id="imgName"></span>
+      <button class="btn mini" id="imgDown">⬇ 下載</button>
+      <button class="icon-btn" id="imgClose">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- 搜尋彈窗 -->
+<div class="mask" id="searchMask">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>🔍 搜尋日記</h3>
+      <button class="icon-btn" id="searchClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <input class="search-input" id="searchInput" placeholder="輸入關鍵字，例如：面試、台積電、開心…" />
+      <div id="searchResults"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= 資料層 ================= */
+const KEY = "my-diary-v1";
+const THEME_KEY = "my-diary-theme";
+const FIELDS = ["study","invest","idea","thanks","quote","diary"];
+const MOODS = ["😊","🥰","😌","🤩","😐","😢","😤","🤒","😴","🎉"];
+
+const QUOTES = [
+  "今天的努力，是明天的底氣。",
+  "慢慢來，比較快。",
+  "你不需要很厲害才能開始，但要開始才會很厲害。",
+  "投資最大的風險，是不知道自己在做什麼。",
+  "複利需要時間，耐心也是一種能力。",
+  "把每一天過好，人生自然就好了。",
+  "先完成，再完美。",
+  "情緒過去了，事情就簡單了。",
+  "讀過的書會變成你的骨架，走過的路會變成你的眼界。",
+  "與其擔心未來，不如把握現在。",
+  "溫柔對待自己，也是一種紀律。",
+  "重要的事，慢慢做；不重要的事，不要做。"
+];
+
+// 安全存取：某些情況（隱私模式、直接開啟的沙箱環境）會禁用 localStorage，
+// 這時退回記憶體暫存，畫面照常運作，只是關掉分頁就不留存。
+const mem = {};
+const store = {
+  ok: true,
+  get(k){
+    try{ return localStorage.getItem(k); }
+    catch(e){ store.ok = false; return k in mem ? mem[k] : null; }
+  },
+  set(k, v){
+    try{ localStorage.setItem(k, v); }
+    catch(e){
+      mem[k] = v;
+      if(store.ok){ store.ok = false; throw e; }
+    }
+  }
+};
+
+let data = load();
+let cur = todayKey();          // 目前檢視的日期 YYYY-MM-DD
+let calMonth = new Date();     // 月曆顯示的月份
+
+function load(){
+  try{
+    const raw = store.get(KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){
+    console.warn("讀取資料失敗", e);
+    return {};
+  }
+}
+
+// 記下「哪幾天被改過」，存檔時蓋上時間戳，雲端同步才知道哪一邊比較新
+const dirtyDays = new Set();
+function touch(){ dirtyDays.add(cur); }
+
+let saveTimer = null;
+function scheduleSave(){
+  touch();
+  showSaver("儲存中…", true);
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 500);
+}
+function saveNow(){
+  clearTimeout(saveTimer);
+  if(dirtyDays.size){
+    const now = Date.now();
+    dirtyDays.forEach(k => {
+      if(!data[k]) return;
+      // 一定要比「這一天目前的時間戳」更大，否則萬一另一台裝置的時鐘比較快，
+      // 你剛剛在這台打的字會在同步時被舊內容蓋掉。
+      data[k].updatedAt = Math.max(now, (data[k].updatedAt || 0) + 1);
+    });
+    dirtyDays.clear();
+    queueSync();
+  }
+  try{
+    store.set(KEY, JSON.stringify(data));
+    showSaver("已儲存 ♡", false);
+  }catch(e){
+    showSaver("無法儲存！請匯出備份", false);
+    alert("這個瀏覽器目前不允許儲存資料（可能是無痕模式或空間已滿）。\n請先按左側「備份全部（JSON）」把內容存成檔案，以免遺失。");
+  }
+  stampAutoTag();
+  refreshSidebar();
+}
+// 日期列上的「自動儲存」小標，讓你隨時看得到最後存檔時間
+const autoTag = document.getElementById("autoTag");
+function stampAutoTag(){
+  const n = new Date();
+  autoTag.textContent = store.ok
+    ? "自動儲存 · " + pad(n.getHours()) + ":" + pad(n.getMinutes())
+    : "無法儲存，請備份";
+}
+
+const saverEl = document.getElementById("saver");
+const saverText = document.getElementById("saverText");
+let saverTimer = null;
+function showSaver(txt, saving){
+  saverText.textContent = txt;
+  saverEl.classList.toggle("saving", !!saving);
+  saverEl.classList.add("show");
+  clearTimeout(saverTimer);
+  if(!saving) saverTimer = setTimeout(()=>saverEl.classList.remove("show"), 1600);
+}
+
+function blank(){ return { todos:[], files:[], study:"", invest:"", idea:"", thanks:"", quote:"", diary:"", mood:"", updatedAt:0 }; }
+function day(k){
+  if(!data[k]) data[k] = blank();
+  const d = data[k];
+  if(typeof d.updatedAt !== "number") d.updatedAt = 0;
+  if(!Array.isArray(d.todos)) d.todos = [];
+  if(!Array.isArray(d.files)) d.files = [];
+  FIELDS.forEach(f => { if(typeof d[f] !== "string") d[f] = ""; });
+  if(typeof d.mood !== "string") d.mood = "";
+  return d;
+}
+function hasContent(k){
+  const d = data[k]; if(!d) return false;
+  return (d.todos && d.todos.length) || (d.files && d.files.length) || d.mood ||
+         FIELDS.some(f => (d[f]||"").trim().length > 0);
+}
+
+/* ================= 附件倉庫（IndexedDB） =================
+   檔案本體放 IndexedDB（空間大，放照片也不怕），
+   日記裡只存檔名／大小等資訊，兩邊用 id 對應。 */
+const FDB = "my-diary-files", FSTORE = "files";
+let dbPromise = null;
+function openDB(){
+  if(dbPromise) return dbPromise;
+  dbPromise = new Promise((res, rej)=>{
+    let req;
+    try{ req = indexedDB.open(FDB, 1); }
+    catch(e){ rej(e); return; }
+    req.onupgradeneeded = ()=>{
+      const db = req.result;
+      if(!db.objectStoreNames.contains(FSTORE)) db.createObjectStore(FSTORE);
+    };
+    req.onsuccess = ()=> res(req.result);
+    req.onerror   = ()=> rej(req.error);
+  });
+  return dbPromise;
+}
+function fileOp(mode, fn){
+  return openDB().then(db => new Promise((res, rej)=>{
+    const st = db.transaction(FSTORE, mode).objectStore(FSTORE);
+    const q = fn(st);
+    q.onsuccess = ()=> res(q.result);
+    q.onerror   = ()=> rej(q.error);
+  }));
+}
+const filePut = (id, blob)=> fileOp("readwrite", s=> s.put(blob, id));
+const fileGet = (id)=>       fileOp("readonly",  s=> s.get(id));
+const fileDel = (id)=>       fileOp("readwrite", s=> s.delete(id));
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function fmtSize(n){
+  if(n < 1024) return n + " B";
+  if(n < 1048576) return (n/1024).toFixed(0) + " KB";
+  return (n/1048576).toFixed(1) + " MB";
+}
+function fileIcon(t, name){
+  t = t || ""; const ext = (name.split(".").pop()||"").toLowerCase();
+  if(t.startsWith("image")) return "🖼️";
+  if(t.startsWith("video")) return "🎬";
+  if(t.startsWith("audio")) return "🎵";
+  if(t.includes("pdf") || ext === "pdf") return "📕";
+  if(["xls","xlsx","csv"].includes(ext)) return "📊";
+  if(["doc","docx","txt","md"].includes(ext)) return "📄";
+  if(["ppt","pptx"].includes(ext)) return "📽️";
+  if(["zip","rar","7z"].includes(ext)) return "🗜️";
+  return "📎";
+}
+function blobToDataURL(blob){
+  return new Promise((res, rej)=>{
+    const r = new FileReader();
+    r.onload = ()=> res(r.result);
+    r.onerror = ()=> rej(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+function dataURLToBlob(durl){
+  const i = durl.indexOf(",");
+  const meta = durl.slice(0, i), b64 = durl.slice(i+1);
+  const mime = (meta.match(/data:([^;]*)/) || [,""])[1];
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for(let j=0;j<bin.length;j++) arr[j] = bin.charCodeAt(j);
+  return new Blob([arr], { type: mime });
+}
+
+/* ================= 日期工具 ================= */
+function pad(n){ return String(n).padStart(2,"0"); }
+function keyOf(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function todayKey(){ return keyOf(new Date()); }
+function parseKey(k){ const [y,m,d]=k.split("-").map(Number); return new Date(y, m-1, d); }
+function shiftDay(k, n){ const d = parseKey(k); d.setDate(d.getDate()+n); return keyOf(d); }
+const WEEK = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"];
+
+/* ================= 畫面：日期列 ================= */
+const dTitle = document.getElementById("dTitle");
+const dSub   = document.getElementById("dSub");
+const dPick  = document.getElementById("dPick");
+const tagToday = document.getElementById("tagToday");
+
+function renderDayBar(){
+  const d = parseKey(cur);
+  dTitle.textContent = d.getFullYear()+" 年 "+(d.getMonth()+1)+" 月 "+d.getDate()+" 日";
+  dSub.textContent   = WEEK[d.getDay()];
+  dPick.value = cur;
+  tagToday.hidden = (cur !== todayKey());
+  document.title = "「"+(d.getMonth()+1)+"/"+d.getDate()+"」我的小日記本";
+}
+
+/* ================= 畫面：心情 ================= */
+const moodList = document.getElementById("moodList");
+MOODS.forEach(m=>{
+  const b = document.createElement("button");
+  b.className = "mood"; b.textContent = m; b.type="button"; b.title = "心情：" + m;
+  b.addEventListener("click", ()=>{
+    const d = day(cur);
+    d.mood = (d.mood === m) ? "" : m;   // 再按一次取消
+    renderMood(); scheduleSave(); renderCalendar();
+  });
+  moodList.appendChild(b);
+});
+function renderMood(){
+  const d = day(cur);
+  [...moodList.children].forEach(b => b.classList.toggle("on", b.textContent === d.mood));
+}
+
+/* ================= 畫面：代辦 ================= */
+const todoList  = document.getElementById("todoList");
+const todoInput = document.getElementById("todoInput");
+const todoCount = document.getElementById("todoCount");
+
+function renderTodos(){
+  const d = day(cur);
+  todoList.textContent = "";
+  if(!d.todos.length){
+    const li = document.createElement("li");
+    li.className = "empty-hint";
+    li.textContent = "還沒有待辦～今天想做點什麼呢？";
+    todoList.appendChild(li);
+  }
+  d.todos.forEach((t, i)=>{
+    const li = document.createElement("li");
+    li.className = "todo-item" + (t.done ? " done" : "");
+
+    const chk = document.createElement("button");
+    chk.className = "check" + (t.done ? " done" : "");
+    chk.type = "button";
+    chk.textContent = t.done ? "✓" : "";
+    chk.title = "完成／取消";
+    chk.addEventListener("click", ()=>{ t.done = !t.done; renderTodos(); scheduleSave(); });
+
+    const span = document.createElement("span");
+    span.className = "todo-text";
+    span.textContent = t.text;
+    span.title = "點兩下可以修改";
+    span.addEventListener("dblclick", ()=>{
+      const v = prompt("修改待辦事項：", t.text);
+      if(v !== null){
+        const nv = v.trim();
+        if(nv){ t.text = nv; }
+        else{ const at = d.todos.indexOf(t); if(at > -1) d.todos.splice(at, 1); }
+        renderTodos(); scheduleSave();
+      }
+    });
+
+    const del = document.createElement("button");
+    del.className = "del"; del.type="button"; del.textContent = "✕"; del.title = "刪除";
+    del.addEventListener("click", ()=>{
+      const at = d.todos.indexOf(t);
+      if(at === -1) return;
+      d.todos.splice(at, 1); renderTodos(); scheduleSave(); renderCalendar();
+    });
+
+    li.append(chk, span, del);
+    todoList.appendChild(li);
+  });
+  const done = d.todos.filter(t=>t.done).length;
+  todoCount.textContent = done + " / " + d.todos.length;
+}
+function addTodo(){
+  const v = todoInput.value.trim();
+  if(!v) return;
+  day(cur).todos.push({ text:v, done:false });
+  todoInput.value = "";
+  renderTodos(); scheduleSave(); renderCalendar();
+}
+document.getElementById("todoAdd").addEventListener("click", addTodo);
+todoInput.addEventListener("keydown", e=>{ if(e.key === "Enter") addTodo(); });
+
+/* ================= 畫面：文字欄位 ================= */
+const areas = [...document.querySelectorAll("textarea[data-field]")];
+const moodWords = document.getElementById("moodWords");
+
+function autoGrow(el){ el.style.height = "auto"; el.style.height = Math.max(el.scrollHeight, 0) + "px"; }
+
+areas.forEach(el=>{
+  el.addEventListener("input", ()=>{
+    day(cur)[el.dataset.field] = el.value;
+    autoGrow(el);
+    if(el.dataset.field === "diary") updateWords();
+    scheduleSave();
+  });
+  el.addEventListener("blur", saveNow);
+});
+function updateWords(){
+  const t = (day(cur).diary || "").replace(/\s/g,"");
+  moodWords.textContent = t.length + " 字";
+}
+function renderFields(){
+  const d = day(cur);
+  areas.forEach(el=>{ el.value = d[el.dataset.field] || ""; autoGrow(el); });
+  updateWords();
+}
+
+document.getElementById("btnQuote").addEventListener("click", ()=>{
+  const el = areas.find(a=>a.dataset.field === "quote");
+  el.value = QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  day(cur).quote = el.value; autoGrow(el); scheduleSave();
+});
+
+/* ================= 畫面：附件 ================= */
+const fileGrid  = document.getElementById("fileGrid");
+const fileCount = document.getElementById("fileCount");
+const drop      = document.getElementById("drop");
+const fileAdd   = document.getElementById("fileAdd");
+const MAX_FILE  = 50 * 1024 * 1024;   // 單檔上限 50MB
+
+let liveUrls = [];
+function freeUrls(){ liveUrls.forEach(u => URL.revokeObjectURL(u)); liveUrls = []; }
+function makeUrl(blob){ const u = URL.createObjectURL(blob); liveUrls.push(u); return u; }
+
+function renderFiles(){
+  freeUrls();
+  const d = day(cur);
+  fileGrid.textContent = "";
+  if(!d.files.length){
+    const e = document.createElement("div");
+    e.className = "empty-hint";
+    e.style.gridColumn = "1 / -1";
+    e.textContent = "今天還沒有附件～照片、單據、筆記截圖都可以丟進來 ♡";
+    fileGrid.appendChild(e);
+  }
+  d.files.forEach((f, i)=>{
+    const box = document.createElement("div");
+    box.className = "file-item";
+
+    const th = document.createElement("div");
+    th.className = "thumb";
+    th.textContent = fileIcon(f.type, f.name);
+
+    const info = document.createElement("div");
+    info.className = "fi-info";
+    const nm = document.createElement("b"); nm.textContent = f.name; nm.title = f.name;
+    const sz = document.createElement("span");
+    const t = new Date(f.at || Date.now());
+    sz.textContent = fmtSize(f.size) + "　" + pad(t.getHours()) + ":" + pad(t.getMinutes());
+    info.append(nm, sz);
+
+    const act = document.createElement("div");
+    act.className = "fi-act";
+    const dl = document.createElement("button");
+    dl.textContent = "⬇"; dl.title = "下載／開啟";
+    dl.addEventListener("click", ()=> downloadFile(f));
+    const rm = document.createElement("button");
+    rm.className = "rm"; rm.textContent = "✕"; rm.title = "刪除附件";
+    rm.addEventListener("click", ()=>{
+      if(!confirm("要刪掉「"+f.name+"」嗎？刪掉就找不回來了。")) return;
+      const at = d.files.indexOf(f);          // 用檔案本身定位，避免刪到別的
+      if(at === -1) return;
+      fileDel(f.id).catch(()=>{});
+      d.files.splice(at, 1);
+      touch(); renderFiles(); saveNow(); renderCalendar();
+    });
+    act.append(dl, rm);
+
+    box.append(th, info, act);
+    fileGrid.appendChild(box);
+
+    // 檔案本體在不在這台裝置？（雲端同步過來的日子可能只有檔名）
+    fileGet(f.id).then(blob=>{
+      if(!th.isConnected) return;
+      if(!blob){
+        box.classList.add("missing");
+        sz.className = "cloud";
+        sz.textContent = "☁️ 這台裝置沒有這個檔案";
+        return;
+      }
+      if((f.type||"").startsWith("image")){
+        const img = document.createElement("img");
+        img.src = makeUrl(blob);
+        img.alt = f.name;
+        img.title = "點一下放大";
+        img.addEventListener("click", ()=> openImage(f));
+        th.textContent = ""; th.appendChild(img);
+      }
+    }).catch(()=>{});
+  });
+
+  const total = d.files.reduce((s,f)=> s + (f.size||0), 0);
+  fileCount.textContent = d.files.length + " 個檔案" + (total ? "　" + fmtSize(total) : "");
+}
+
+function downloadFile(f){
+  fileGet(f.id).then(blob=>{
+    if(!blob){ alert("找不到這個檔案的內容，可能已被清除。"); return; }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = f.name;
+    a.click();
+    setTimeout(()=> URL.revokeObjectURL(a.href), 3000);
+  }).catch(()=> alert("開啟檔案失敗。"));
+}
+
+async function addFiles(list){
+  const d = day(cur);
+  let added = 0;
+  for(const f of list){
+    if(f.size > MAX_FILE){ alert("「"+f.name+"」超過 50MB，這次先跳過。"); continue; }
+    const id = uid();
+    try{
+      await filePut(id, f);
+      d.files.push({ id, name:f.name, size:f.size, type:f.type, at:Date.now() });
+      added++;
+    }catch(e){
+      alert("「"+f.name+"」存不進去：" + (e && e.name === "QuotaExceededError" ? "瀏覽器空間不足" : "瀏覽器不支援或已被封鎖"));
+    }
+  }
+  if(added){ touch(); renderFiles(); saveNow(); renderCalendar(); showSaver("附件已存好 ♡", false); }
+}
+
+drop.addEventListener("click", ()=> fileAdd.click());
+fileAdd.addEventListener("change", e=>{ if(e.target.files.length) addFiles([...e.target.files]); e.target.value = ""; });
+["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","dragend"].forEach(ev => drop.addEventListener(ev, ()=> drop.classList.remove("over")));
+drop.addEventListener("drop", e=>{
+  e.preventDefault(); drop.classList.remove("over");
+  if(e.dataTransfer && e.dataTransfer.files.length) addFiles([...e.dataTransfer.files]);
+});
+// 避免拖到旁邊時瀏覽器直接開啟檔案
+window.addEventListener("dragover", e=> e.preventDefault());
+window.addEventListener("drop", e=> e.preventDefault());
+
+/* 圖片放大 */
+const imgMask = document.getElementById("imgMask");
+const imgFull = document.getElementById("imgFull");
+let lightFile = null;
+function openImage(f){
+  lightFile = f;
+  fileGet(f.id).then(blob=>{
+    if(!blob) return;
+    imgFull.src = makeUrl(blob);
+    document.getElementById("imgName").textContent = f.name + "　" + fmtSize(f.size);
+    imgMask.classList.add("show");
+  });
+}
+function closeImage(){ imgMask.classList.remove("show"); imgFull.removeAttribute("src"); }
+document.getElementById("imgClose").addEventListener("click", closeImage);
+document.getElementById("imgDown").addEventListener("click", ()=>{ if(lightFile) downloadFile(lightFile); });
+imgMask.addEventListener("click", e=>{ if(e.target === imgMask) closeImage(); });
+
+/* ================= 畫面：月曆 ================= */
+const calGrid  = document.getElementById("calGrid");
+const calTitle = document.getElementById("calTitle");
+
+function renderCalendar(){
+  const y = calMonth.getFullYear(), m = calMonth.getMonth();
+  calTitle.textContent = y + " 年 " + (m+1) + " 月";
+  calGrid.textContent = "";
+  ["日","一","二","三","四","五","六"].forEach(w=>{
+    const s = document.createElement("div"); s.className = "dow"; s.textContent = w; calGrid.appendChild(s);
+  });
+  const first = new Date(y, m, 1).getDay();
+  const total = new Date(y, m+1, 0).getDate();
+  for(let i=0;i<first;i++){
+    const s = document.createElement("div"); s.className="cal-cell empty"; calGrid.appendChild(s);
+  }
+  const tk = todayKey();
+  for(let d=1; d<=total; d++){
+    const k = y+"-"+pad(m+1)+"-"+pad(d);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "cal-cell" + (k===tk ? " today":"") + (k===cur ? " active":"");
+    b.textContent = d;
+    if(hasContent(k)){
+      const dot = document.createElement("span"); dot.className="dot"; b.appendChild(dot);
+      const mo = data[k].mood; b.title = k + (mo ? "　"+mo : "　已有紀錄");
+    }
+    b.addEventListener("click", ()=> goto(k));
+    calGrid.appendChild(b);
+  }
+}
+document.getElementById("calPrev").addEventListener("click", ()=>{ calMonth.setMonth(calMonth.getMonth()-1); renderCalendar(); });
+document.getElementById("calNext").addEventListener("click", ()=>{ calMonth.setMonth(calMonth.getMonth()+1); renderCalendar(); });
+
+/* ================= 側邊統計 ================= */
+function refreshSidebar(){
+  const keys = Object.keys(data).filter(hasContent).sort();
+  document.getElementById("stDays").textContent = keys.length;
+
+  // 連續天數（從今天或昨天往回算）
+  let streak = 0;
+  let probe = todayKey();
+  if(!hasContent(probe)) probe = shiftDay(probe,-1);
+  while(hasContent(probe)){ streak++; probe = shiftDay(probe,-1); }
+  document.getElementById("stStreak").textContent = streak;
+
+  // 本月字數 / 完成待辦
+  const pre = cur.slice(0,7);
+  let words = 0, done = 0;
+  keys.filter(k=>k.startsWith(pre)).forEach(k=>{
+    const d = data[k];
+    FIELDS.forEach(f => words += (d[f]||"").replace(/\s/g,"").length);
+    done += (d.todos||[]).filter(t=>t.done).length;
+  });
+  document.getElementById("stWords").textContent = words;
+  document.getElementById("stDone").textContent = done;
+}
+
+/* ================= 切換日期 ================= */
+function goto(k){
+  saveNow();
+  cur = k;
+  const d = parseKey(k);
+  calMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+  renderAll();
+  window.scrollTo({ top:0, behavior:"smooth" });
+}
+function renderAll(){
+  renderDayBar(); renderMood(); renderTodos(); renderFields(); renderFiles();
+  renderCalendar(); refreshSidebar();
+}
+document.getElementById("dPrev").addEventListener("click", ()=> goto(shiftDay(cur,-1)));
+document.getElementById("dNext").addEventListener("click", ()=> goto(shiftDay(cur, 1)));
+document.getElementById("dToday").addEventListener("click", ()=> goto(todayKey()));
+dPick.addEventListener("change", ()=>{ if(dPick.value) goto(dPick.value); });
+
+/* ================= 備份 / 匯入 / 匯出 ================= */
+function download(name, text, type){
+  const blob = new Blob([text], { type: type || "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+document.getElementById("btnExport").addEventListener("click", async ()=>{
+  saveNow();
+  const ids = [];
+  Object.keys(data).forEach(k => (data[k].files||[]).forEach(f => ids.push(f)));
+  const payload = { app:"my-diary", version:2, exportedAt:new Date().toISOString(), days:data };
+
+  if(ids.length && confirm("這份備份裡有 "+ids.length+" 個附件。\n\n【確定】＝連附件一起備份（檔案較大，最完整）\n【取消】＝只備份文字內容（小而快）")){
+    showSaver("打包附件中…", true);
+    payload.files = {};
+    for(const f of ids){
+      try{
+        const blob = await fileGet(f.id);
+        if(blob) payload.files[f.id] = await blobToDataURL(blob);
+      }catch(e){ /* 單一附件失敗就跳過，不擋整份備份 */ }
+    }
+    showSaver("已匯出 ♡", false);
+  }
+  const has = payload.files ? "-含附件" : "";
+  download("日記備份-"+todayKey()+has+".json", JSON.stringify(payload), "application/json;charset=utf-8");
+});
+document.getElementById("btnMd").addEventListener("click", ()=>{
+  const d = day(cur), dt = parseKey(cur);
+  let md = "# "+dt.getFullYear()+" 年 "+(dt.getMonth()+1)+" 月 "+dt.getDate()+" 日（"+WEEK[dt.getDay()]+"）"+(d.mood ? "　"+d.mood : "")+"\n\n";
+  md += "## ✓ 代辦事項\n" + (d.todos.length ? d.todos.map(t=>"- ["+(t.done?"x":" ")+"] "+t.text).join("\n") : "（無）") + "\n\n";
+  md += "## 📚 讀書日記\n"     + (d.study.trim()  || "（無）") + "\n\n";
+  md += "## 📈 投資日記\n"     + (d.invest.trim() || "（無）") + "\n\n";
+  md += "## 💡 新點子開發\n"   + (d.idea.trim()   || "（無）") + "\n\n";
+  md += "## 🌷 感恩的一句話\n" + (d.thanks.trim() || "（無）") + "\n\n";
+  md += "## ✒️ 名言佳句\n> "   + (d.quote.trim()  || "（無）") + "\n\n";
+  md += "## 💗 心情筆記本\n"   + (d.diary.trim()  || "（無）") + "\n\n";
+  md += "## 📎 今日附件\n" + (d.files.length ? d.files.map(f=>"- "+f.name+"（"+fmtSize(f.size)+"）").join("\n") : "（無）") + "\n";
+  download("日記-"+cur+".md", md, "text/markdown;charset=utf-8");
+});
+document.getElementById("btnImport").addEventListener("click", ()=> document.getElementById("fileInput").click());
+document.getElementById("fileInput").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = async ()=>{
+    try{
+      const obj = JSON.parse(r.result);
+      if(typeof obj !== "object" || Array.isArray(obj) || obj === null) throw new Error("格式不符");
+      const days = (obj.days && typeof obj.days === "object") ? obj.days : obj;  // 舊格式也吃得下
+      const n = Object.keys(days).length;
+      const fc = obj.files ? Object.keys(obj.files).length : 0;
+      if(!confirm("要匯入 "+n+" 天的紀錄"+(fc ? "、"+fc+" 個附件" : "")+"嗎？\n（同一天的內容會被備份檔覆蓋，其他日期保留）")) return;
+      Object.assign(data, days);
+      if(fc){
+        showSaver("還原附件中…", true);
+        for(const id of Object.keys(obj.files)){
+          try{ await filePut(id, dataURLToBlob(obj.files[id])); }catch(e){ /* 跳過壞掉的附件 */ }
+        }
+      }
+      saveNow(); renderAll();
+      alert("匯入完成 ♡ 共 "+n+" 天"+(fc ? "、"+fc+" 個附件" : ""));
+    }catch(err){
+      alert("匯入失敗：這個檔案看起來不是日記備份檔。");
+    }
+  };
+  r.readAsText(f, "utf-8");
+  e.target.value = "";
+});
+
+/* ================= 夜間模式 ================= */
+const btnTheme = document.getElementById("btnTheme");
+function applyTheme(t){
+  document.documentElement.dataset.theme = t;
+  btnTheme.textContent = (t === "dark" ? "☀️　切換日間模式" : "🌙　切換夜間模式");
+  try{ store.set(THEME_KEY, t); }catch(e){ /* 不能存主題也不影響使用 */ }
+}
+btnTheme.addEventListener("click", ()=>{
+  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  areas.forEach(autoGrow);
+});
+applyTheme(store.get(THEME_KEY) || "light");
+
+/* ================= GitHub 雲端同步 =================
+   把整本日記（文字部分）存成 repo 裡的一個 JSON 檔。
+   合併規則：以「天」為單位比 updatedAt，較新的那一邊勝出，
+   所以兩台裝置各自寫不同天完全不會互相覆蓋。 */
+const GH_KEY = "my-diary-github";
+let ghCfg = null;
+try{ ghCfg = JSON.parse(store.get(GH_KEY) || "null"); }catch(e){ ghCfg = null; }
+
+const syncStateEl = document.getElementById("syncState");
+function setSync(text, cls){
+  syncStateEl.textContent = text;
+  syncStateEl.className = "sync-state" + (cls ? " " + cls : "");
+}
+function hhmm(){ const n = new Date(); return pad(n.getHours()) + ":" + pad(n.getMinutes()); }
+function showSyncIdle(){
+  if(!ghCfg){ setSync("尚未設定", ""); return; }
+  setSync(ghCfg.last ? "已連線 · 最後同步 " + new Date(ghCfg.last).toLocaleString("zh-TW",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})
+                     : "已連線 · 尚未同步", "ok");
+}
+
+/* --- UTF-8 ⇄ base64（GitHub API 要 base64） --- */
+function b64encode(str){
+  const bytes = new TextEncoder().encode(str);
+  let bin = ""; const CH = 0x8000;
+  for(let i=0;i<bytes.length;i+=CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+CH));
+  return btoa(bin);
+}
+function b64decode(b64){
+  const bin = atob(String(b64).replace(/\s/g,""));
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+function ghUrl(cfg){
+  const p = String(cfg.path||"diary.json").split("/").map(encodeURIComponent).join("/");
+  return "https://api.github.com/repos/" + cfg.repo + "/contents/" + p;
+}
+function ghHeaders(cfg){
+  return {
+    "Authorization": "Bearer " + cfg.token,
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+}
+function ghError(status){
+  if(status === 401) return "Token 無效或已過期";
+  if(status === 403) return "沒有權限（請確認 Token 的 Contents 權限）";
+  if(status === 404) return "找不到 repo（請確認名稱，且 Token 有選到這個 repo）";
+  if(status === 409) return "版本衝突";
+  if(status === 422) return "GitHub 拒絕寫入（檔案太大或路徑不合法）";
+  return "GitHub 回應錯誤 " + status;
+}
+
+async function ghRead(cfg){
+  const res = await fetch(ghUrl(cfg) + "?t=" + Date.now(), { headers: ghHeaders(cfg), cache: "no-store" });
+  if(res.status === 404) return { days:null, sha:null };          // 還沒有檔案＝第一次同步
+  if(!res.ok) throw new Error(ghError(res.status));
+  const j = await res.json();
+  let parsed = null;
+  try{ parsed = JSON.parse(b64decode(j.content)); }catch(e){ throw new Error("雲端檔案格式壞掉了，無法解析"); }
+  return { days: (parsed && parsed.days) ? parsed.days : {}, sha: j.sha };
+}
+async function ghWrite(cfg, days, sha){
+  const body = {
+    message: "日記更新 " + new Date().toLocaleString("zh-TW"),
+    content: b64encode(JSON.stringify({ app:"my-diary", version:2, updatedAt:Date.now(), days }, null, 1))
+  };
+  if(sha) body.sha = sha;
+  const res = await fetch(ghUrl(cfg), { method:"PUT", headers: ghHeaders(cfg), body: JSON.stringify(body) });
+  if(!res.ok) { const e = new Error(ghError(res.status)); e.status = res.status; throw e; }
+  return res.json();
+}
+
+/* 以「天」為單位合併：誰的 updatedAt 比較新就用誰的 */
+function mergeDays(local, remote){
+  const out = {};
+  new Set([...Object.keys(local||{}), ...Object.keys(remote||{})]).forEach(k=>{
+    const a = local[k], b = remote[k];
+    if(!a){ out[k] = b; return; }
+    if(!b){ out[k] = a; return; }
+    out[k] = ((b.updatedAt||0) > (a.updatedAt||0)) ? b : a;
+  });
+  return out;
+}
+
+let syncing = false, syncTimer = null, syncPending = false;
+function queueSync(){
+  if(!ghCfg || !ghCfg.auto) return;
+  syncPending = true;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(()=> syncNow(true), 8000);   // 打字停一下才上傳，不吵 GitHub
+}
+// 手機切到別的 App 時計時器可能來不及跑，先送出去比較保險
+function flushSync(){
+  if(!syncPending || !ghCfg || !ghCfg.auto) return;
+  clearTimeout(syncTimer);
+  syncNow(true);
+}
+
+async function syncNow(silent){
+  if(!ghCfg){ if(!silent) openGh(); return; }
+  if(syncing) return;
+  syncing = true; syncPending = false; clearTimeout(syncTimer);
+  setSync("同步中…", "busy");
+  try{
+    saveNow();
+    let got = await ghRead(ghCfg);
+    let merged = mergeDays(data, got.days || {});
+    const needPush = JSON.stringify(merged) !== JSON.stringify(got.days || {});
+
+    data = merged;
+    store.set(KEY, JSON.stringify(data));
+
+    if(needPush){
+      try{
+        await ghWrite(ghCfg, merged, got.sha);
+      }catch(e){
+        if(e.status === 409){                    // 別台裝置剛好也在寫 → 重讀重合併一次
+          got = await ghRead(ghCfg);
+          merged = mergeDays(data, got.days || {});
+          data = merged;
+          store.set(KEY, JSON.stringify(data));
+          await ghWrite(ghCfg, merged, got.sha);
+        } else throw e;
+      }
+    }
+    ghCfg.last = Date.now();
+    store.set(GH_KEY, JSON.stringify(ghCfg));
+    renderAll();
+    setSync("已同步 · " + hhmm(), "ok");
+  }catch(err){
+    setSync("同步失敗：" + err.message, "err");
+    if(!silent) alert("同步失敗：" + err.message);
+  }finally{
+    syncing = false;
+  }
+}
+
+/* --- 設定視窗 --- */
+const ghMask = document.getElementById("ghMask");
+const ghRepo = document.getElementById("ghRepo");
+const ghPath = document.getElementById("ghPath");
+const ghToken = document.getElementById("ghToken");
+const ghAuto = document.getElementById("ghAuto");
+const ghMsg = document.getElementById("ghMsg");
+
+function openGh(){
+  ghRepo.value  = ghCfg ? ghCfg.repo  : "";
+  ghPath.value  = ghCfg ? ghCfg.path  : "diary.json";
+  ghToken.value = ghCfg ? ghCfg.token : "";
+  ghAuto.checked = ghCfg ? ghCfg.auto !== false : true;
+  ghMsg.textContent = ""; ghMsg.className = "gh-msg";
+  ghMask.classList.add("show");
+}
+function closeGh(){ ghMask.classList.remove("show"); }
+document.getElementById("btnSyncSet").addEventListener("click", openGh);
+document.getElementById("ghClose").addEventListener("click", closeGh);
+ghMask.addEventListener("click", e=>{ if(e.target === ghMask) closeGh(); });
+document.getElementById("btnSyncNow").addEventListener("click", ()=> syncNow(false));
+
+document.getElementById("ghSave").addEventListener("click", async ()=>{
+  const cfg = {
+    repo: ghRepo.value.trim().replace(/^https?:\/\/github\.com\//,"").replace(/\.git$/,"").replace(/\/+$/,""),
+    path: ghPath.value.trim() || "diary.json",
+    token: ghToken.value.trim(),
+    auto: ghAuto.checked
+  };
+  if(!/^[\w.-]+\/[\w.-]+$/.test(cfg.repo)){ ghMsg.className="gh-msg err"; ghMsg.textContent="Repo 格式要像 yourname/my-diary-data"; return; }
+  if(!cfg.token){ ghMsg.className="gh-msg err"; ghMsg.textContent="請貼上 Token"; return; }
+
+  ghMsg.className = "gh-msg"; ghMsg.textContent = "檢查連線中…";
+  try{
+    const res = await fetch("https://api.github.com/repos/" + cfg.repo, { headers: ghHeaders(cfg), cache:"no-store" });
+    if(!res.ok) throw new Error(ghError(res.status));
+    const repo = await res.json();
+    if(repo.private === false){
+      if(!confirm("⚠️ 這個 repo 是「公開」的！\n日記內容會變成全世界都看得到。\n\n強烈建議改用 Private repo。仍要繼續嗎？")) {
+        ghMsg.className="gh-msg err"; ghMsg.textContent="已取消：請改用 Private repo"; return;
+      }
+    }
+    if(repo.permissions && repo.permissions.push === false) throw new Error("這個 Token 沒有寫入權限（Contents 要設 Read and write）");
+
+    ghCfg = cfg;
+    store.set(GH_KEY, JSON.stringify(ghCfg));
+    ghMsg.className = "gh-msg ok";
+    ghMsg.textContent = "連線成功 ♡ " + (repo.private ? "（私人 repo）" : "（公開 repo）") + " 開始第一次同步…";
+    await syncNow(true);
+    setTimeout(closeGh, 900);
+  }catch(err){
+    ghMsg.className = "gh-msg err";
+    ghMsg.textContent = "連線失敗：" + err.message;
+  }
+});
+
+document.getElementById("ghForget").addEventListener("click", ()=>{
+  if(!confirm("要移除同步設定嗎？\n（這台裝置的日記會留著，只是不再跟 GitHub 連線）")) return;
+  ghCfg = null;
+  try{ localStorage.removeItem(GH_KEY); }catch(e){}
+  showSyncIdle();
+  ghToken.value = "";
+  ghMsg.className = "gh-msg"; ghMsg.textContent = "已移除設定";
+});
+
+/* ================= 搜尋 ================= */
+const mask = document.getElementById("searchMask");
+const sInput = document.getElementById("searchInput");
+const sRes = document.getElementById("searchResults");
+const LABEL = { study:"讀書", invest:"投資", idea:"點子", thanks:"感恩", quote:"名言", diary:"心情" };
+
+function openSearch(){ mask.classList.add("show"); sInput.value=""; runSearch(); sInput.focus(); }
+function closeSearch(){ mask.classList.remove("show"); }
+document.getElementById("btnSearch").addEventListener("click", openSearch);
+document.getElementById("searchClose").addEventListener("click", closeSearch);
+mask.addEventListener("click", e=>{ if(e.target === mask) closeSearch(); });
+sInput.addEventListener("input", runSearch);
+
+function runSearch(){
+  const q = sInput.value.trim().toLowerCase();
+  const keys = Object.keys(data).filter(hasContent).sort().reverse();
+  sRes.textContent = "";
+  let hits = 0;
+  keys.forEach(k=>{
+    const d = data[k];
+    const parts = [];
+    FIELDS.forEach(f => { if((d[f]||"").trim()) parts.push(LABEL[f]+"：" + d[f].trim()); });
+    (d.todos||[]).forEach(t => parts.push("待辦："+t.text));
+    (d.files||[]).forEach(f => parts.push("附件："+f.name));
+    const text = parts.join("　/　");
+    if(q && !(text.toLowerCase().includes(q) || k.includes(q))) return;
+    if(hits >= 60) return;
+    hits++;
+    const box = document.createElement("div");
+    box.className = "result";
+    const b = document.createElement("b");
+    const dt = parseKey(k);
+    b.textContent = k + "（"+WEEK[dt.getDay()]+"）" + (d.mood ? "　"+d.mood : "");
+    const p = document.createElement("p");
+    p.textContent = text || "（僅有心情紀錄）";
+    box.append(b,p);
+    box.addEventListener("click", ()=>{ closeSearch(); goto(k); });
+    sRes.appendChild(box);
+  });
+  if(!hits){
+    const e = document.createElement("div");
+    e.className = "empty-hint";
+    e.textContent = q ? "找不到符合的日記 🥲" : "還沒有任何紀錄，從今天開始吧 ♡";
+    sRes.appendChild(e);
+  }
+}
+
+/* ================= 快捷鍵 & 離開前存檔 ================= */
+document.addEventListener("keydown", e=>{
+  if((e.ctrlKey||e.metaKey) && e.key === "s"){ e.preventDefault(); saveNow(); }
+  if((e.ctrlKey||e.metaKey) && e.key === "k"){ e.preventDefault(); openSearch(); }
+  if(e.key === "Escape"){ closeSearch(); closeImage(); closeGh(); }
+});
+window.addEventListener("beforeunload", saveNow);
+document.addEventListener("visibilitychange", ()=>{
+  if(document.hidden){ saveNow(); flushSync(); }
+  else if(ghCfg && ghCfg.auto && !syncing) syncNow(true);   // 回到頁面時順手拉一下別台裝置的更新
+});
+
+/* ================= 啟動 ================= */
+renderAll();
+autoTag.textContent = store.ok ? "自動儲存中" : "無法儲存，請備份";
+showSyncIdle();
+if(ghCfg && ghCfg.auto) syncNow(true);   // 一開啟就先拉雲端的最新版
+
+// 上線後才註冊離線功能（直接雙擊開檔的 file:// 不支援，跳過即可）
+if("serviceWorker" in navigator && location.protocol.indexOf("http") === 0){
+  window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+}
+})();
+</script>
+</body>
+</html>
