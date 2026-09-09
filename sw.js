@@ -3,7 +3,7 @@
    策略：網頁本身「先連網、失敗才用快取」，圖示等靜態檔「先用快取」。
    注意：只處理同網域的請求，GitHub API 一律直接放行，不進快取。 */
 
-const CACHE = "diary-v1";
+const CACHE = "diary-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -46,9 +46,12 @@ self.addEventListener("fetch", (e) => {
                  url.pathname.endsWith(".html");
 
   if (isPage) {
-    // 先連網，拿到新版就更新快取；沒網路才用舊的
+    // 先連網，拿到新版就更新快取；沒網路才用舊的。
+    // 一定要用 cache:"no-cache" 向伺服器重新驗證，否則會拿到瀏覽器 HTTP 快取裡
+    // 的舊網頁（GitHub Pages 的 HTML 預設快取 10 分鐘），更新後看不到新版。
+    const fresh = new Request(req.url, { cache: "no-cache", credentials: "same-origin" });
     e.respondWith(
-      fetch(req)
+      fetch(fresh)
         .then((res) => {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
