@@ -148,6 +148,14 @@ body::after { width:460px;height:460px; background:var(--bg-blob-2); bottom:-200
 .stat b{ display:block;font-size:19px;line-height:1.3;color:var(--accent-deep); }
 .stat span{ font-size:10.5px;color:var(--text-soft);letter-spacing:.5px; }
 
+.store-line{
+  margin-top:9px;font-size:11px;color:var(--text-soft);line-height:1.65;
+  background:var(--surface-soft);border:1px solid var(--border);border-radius:12px;padding:8px 10px;
+}
+.store-line b{ color:var(--text); font-weight:700; }
+.store-line .lock{ color:#4fa88a; }
+.store-line .risk{ color:#d99a5b; }
+
 .side-actions{ display:flex;flex-direction:column;gap:7px; }
 .btn{
   border:1px solid var(--border); background:var(--surface); color:var(--text);
@@ -442,6 +450,7 @@ textarea.thanks{ min-height:84px; }
         <div class="stat"><b id="stWords">0</b><span>本月字數</span></div>
         <div class="stat"><b id="stDone">0</b><span>本月完成</span></div>
       </div>
+      <div class="store-line" id="storeLine">計算容量中…</div>
     </div>
 
     <div class="panel">
@@ -829,10 +838,60 @@ const fileGet = (id)=>       fileOp("readonly",  s=> s.get(id));
 const fileDel = (id)=>       fileOp("readwrite", s=> s.delete(id));
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+/* 這台裝置叫什麼名字（附件不會同步，所以要記清楚檔案留在哪一台） */
+const DEV_KEY = "my-diary-device";
+function deviceName(){
+  let n = store.get(DEV_KEY);
+  if(!n){
+    n = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? "手機" : "電腦";
+    try{ store.set(DEV_KEY, n); }catch(e){}
+  }
+  return n;
+}
+
+/* 跟瀏覽器要「持久化儲存」：拿到之後，資料不會因為空間不足或久沒開而被自動清掉 */
+function askPersist(){
+  if(!navigator.storage || !navigator.storage.persist) return Promise.resolve(false);
+  return navigator.storage.persisted()
+    .then(p => p ? true : navigator.storage.persist())
+    .catch(()=> false);
+}
+
+/* 顯示附件用掉多少空間、資料有沒有被保護 */
+function refreshStorage(){
+  const el = document.getElementById("storeLine");
+  if(!el) return;
+  if(!navigator.storage || !navigator.storage.estimate){
+    el.textContent = "這個瀏覽器不會回報容量";
+    return;
+  }
+  navigator.storage.estimate().then(est=>{
+    const used = est.usage || 0, quota = est.quota || 0;
+    el.textContent = "";
+    const line1 = document.createElement("div");
+    line1.append(deviceName() + "已用 ");
+    const b = document.createElement("b"); b.textContent = fmtSize(used);
+    line1.append(b);
+    if(quota) line1.append("　可用約 " + fmtSize(quota));
+    el.appendChild(line1);
+
+    askPersist().then(ok=>{
+      const line2 = document.createElement("div");
+      const s = document.createElement("span");
+      s.className = ok ? "lock" : "risk";
+      s.textContent = ok ? "🔒 資料已受保護，不會被自動清除"
+                         : "⚠️ 未受保護，請定期備份";
+      line2.appendChild(s);
+      el.appendChild(line2);
+    });
+  }).catch(()=>{ el.textContent = ""; });
+}
 function fmtSize(n){
   if(n < 1024) return n + " B";
   if(n < 1048576) return (n/1024).toFixed(0) + " KB";
-  return (n/1048576).toFixed(1) + " MB";
+  if(n < 1073741824) return (n/1048576).toFixed(1) + " MB";
+  return (n/1073741824).toFixed(2) + " GB";
 }
 function fileIcon(t, name){
   t = t || ""; const ext = (name.split(".").pop()||"").toLowerCase();
@@ -1049,7 +1108,7 @@ function renderFiles(){
       if(at === -1) return;
       fileDel(f.id).catch(()=>{});
       d.files.splice(at, 1);
-      touch(); renderFiles(); saveNow(); renderCalendar();
+      touch(); renderFiles(); saveNow(); renderCalendar(); refreshStorage();
     });
     act.append(dl, rm);
 
@@ -1062,7 +1121,8 @@ function renderFiles(){
       if(!blob){
         box.classList.add("missing");
         sz.className = "cloud";
-        sz.textContent = "☁️ 這台裝置沒有這個檔案";
+        sz.textContent = f.dev ? "☁️ 檔案在「" + f.dev + "」上，這台沒有"
+                               : "☁️ 這台裝置沒有這個檔案";
         return;
       }
       if((f.type||"").startsWith("image")){
@@ -1099,13 +1159,13 @@ async function addFiles(list){
     const id = uid();
     try{
       await filePut(id, f);
-      d.files.push({ id, name:f.name, size:f.size, type:f.type, at:Date.now() });
+      d.files.push({ id, name:f.name, size:f.size, type:f.type, at:Date.now(), dev:deviceName() });
       added++;
     }catch(e){
       alert("「"+f.name+"」存不進去：" + (e && e.name === "QuotaExceededError" ? "瀏覽器空間不足" : "瀏覽器不支援或已被封鎖"));
     }
   }
-  if(added){ touch(); renderFiles(); saveNow(); renderCalendar(); showSaver("附件已存好 ♡", false); }
+  if(added){ touch(); renderFiles(); saveNow(); renderCalendar(); refreshStorage(); showSaver("附件已存好 ♡", false); }
 }
 
 drop.addEventListener("click", ()=> fileAdd.click());
@@ -1565,6 +1625,7 @@ document.addEventListener("visibilitychange", ()=>{
 renderAll();
 autoTag.textContent = store.ok ? "自動儲存中" : "無法儲存，請備份";
 showSyncIdle();
+refreshStorage();
 if(ghCfg && ghCfg.auto) syncNow(true);   // 一開啟就先拉雲端的最新版
 
 // 上線後才註冊離線功能（直接雙擊開檔的 file:// 不支援，跳過即可）
